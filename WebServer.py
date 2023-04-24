@@ -27,9 +27,8 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
 
     if path.isfile("./passwordDB/apikeys"):
         print ("Api file found")
-        f = open("./passwordDB/apikeys","r")
-        lines = f.readlines()
-        f.close()
+        with open("./passwordDB/apikeys","r") as f:
+            lines = f.readlines()
         for line in lines:
             apikeys.append(line.strip())
 
@@ -41,24 +40,21 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
     def token_is_valid(token):
         print(token)
         print(apikeys)
-        if token in apikeys:
-            return True
-        if token in tokens:
-            return True
-        else :
-            return False
+        return True if token in apikeys else token in tokens
 
     def login(username,passwd):
-        print("User = "+str(type(username))+" passwd = "+str(type(passwd))+"\n")
+        print(f"User = {str(type(username))} passwd = {str(type(passwd))}" + "\n")
         if username not in user_passwd:
             print("User does not exist\n")
             return False
         else:
             hashed_passwd = user_passwd[username]
-            if hashpw(passwd.encode('utf-8'),hashed_passwd.encode('utf-8')).decode('utf-8') == hashed_passwd:
-                return True
-            else:
-                return False
+            return (
+                hashpw(
+                    passwd.encode('utf-8'), hashed_passwd.encode('utf-8')
+                ).decode('utf-8')
+                == hashed_passwd
+            )
 
     def create(username,passwd):
         if username in user_passwd:
@@ -72,6 +68,8 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
             entry['p'] = hashed.decode('utf-8')
             passwdDB.insert(entry)
             return True
+
+
 
     class WebServer(BaseHTTPRequestHandler):
         def _set_response(self,content):
@@ -90,7 +88,7 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
                         token = morsel.value
             else:
                 print("No cookie for you\n")
-            
+
             if token_is_valid(token):
                 if '/BSSID' in self.path:
                     tokens = self.path.split('?')
@@ -111,26 +109,24 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
                     essid = tokens[1]
                     essid = essid.replace("%20",' ')
                     print(essid)
-                    
+
                     html = WIFIAP_handler.getListByESSID(essid)
                     self._set_response('application/json')
                     self.wfile.write(bytearray(html,"UTF-8"))
                     return
-                
+
                 try:
                     file = self.path.split("/")[1]
-                    f = open(curdir + sep + "HTML/"+file)
-                    self._set_response('text/html')
-                    self.wfile.write(bytearray(f.read(),"UTF-8"))
-                    f.close()
+                    with open(curdir + sep + "HTML/"+file) as f:
+                        self._set_response('text/html')
+                        self.wfile.write(bytearray(f.read(),"UTF-8"))
                     return
                 except:
-                    f = open(curdir + sep + "HTML/404.html")
-                    self._set_response('text/html')
-                    self.wfile.write(bytearray(f.read(),"UTF-8"))
-                    f.close()
+                    with open(curdir + sep + "HTML/404.html") as f:
+                        self._set_response('text/html')
+                        self.wfile.write(bytearray(f.read(),"UTF-8"))
                     return
-            
+
             else:
                 print("Bad token\n")
                 self.send_response(301)
@@ -140,21 +136,19 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
         def do_GET(self):
             print(self.path)
             if self.path=="/":
-                f = open(curdir + sep + "HTML/index.html")
-                self._set_response('text/html')
-                self.wfile.write(bytearray(f.read(),"UTF-8"))
-                f.close()
+                with open(curdir + sep + "HTML/index.html") as f:
+                    self._set_response('text/html')
+                    self.wfile.write(bytearray(f.read(),"UTF-8"))
                 return
 
             if self.path=="/create.html":
                 self.path="/create.html"
                 mimetype='text/html'
-                f = open(curdir + sep + "HTML/create.html") 
-                self.send_response(200)
-                self.send_header('Content-type',mimetype)
-                self.end_headers()
-                self.wfile.write(bytearray(f.read(),"UTF-8"))
-                f.close()
+                with open(curdir + sep + "HTML/create.html") as f:
+                    self.send_response(200)
+                    self.send_header('Content-type',mimetype)
+                    self.end_headers()
+                    self.wfile.write(bytearray(f.read(),"UTF-8"))
                 return
 
             self.serveWithCookie()
@@ -179,11 +173,11 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
                         environ={'REQUEST_METHOD':'POST',
                                 'CONTENT_TYPE':self.headers['Content-Type']
                                 })
-                    
+
                     filename = form['filename'].filename
                     file = form['filename'].file.read()
-                    
-                    if path.isfile("./kismet/"+filename):
+
+                    if path.isfile(f"./kismet/{filename}"):
                         print ("File exist")
                         self.send_response(301)
                         self.send_header('Location','/fail.html')
@@ -194,13 +188,12 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
                         self.send_response(301)
                         self.send_header('Location','/success.html')
                         self.end_headers()
-                        f = open("./kismet/"+filename,'w')
-                        f.write(file.decode("ISO-8859-1"))
-                        f.close()
-                        WIFIAP_handler.update_from_file("./kismet/"+filename)
+                        with open(f"./kismet/{filename}", 'w') as f:
+                            f.write(file.decode("ISO-8859-1"))
+                        WIFIAP_handler.update_from_file(f"./kismet/{filename}")
                         return
-                    
-                    
+
+
                 else:
                     print("Bad token\n")
                     self.send_response(301)
@@ -218,22 +211,21 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
                 username = form["uname"].value
                 if login(username, form["psw"].value):
                     print("HERE")
-                    f = open(curdir + sep + "HTML/search.html")
-                    mimetype='text/html'
-                    c = cookies.SimpleCookie()
-                    rand_token = uuid4()
-                    tokens[str(rand_token)] = form["uname"].value
-                    c['token'] = str(rand_token)
-                    c['token']['expires'] = 3*60*60
-                    t = Timer(3*60*60, delete_token,args = [str(rand_token)])
-                    t.start()
-                    timers[str(rand_token)] = t
-                    self.send_response(200)
-                    self.send_header('Set-Cookie',str(c)[12:])
-                    self.send_header('Content-type',mimetype)
-                    self.end_headers()
-                    self.wfile.write(bytearray(f.read(),"UTF-8"))
-                    f.close()
+                    with open(curdir + sep + "HTML/search.html") as f:
+                        mimetype='text/html'
+                        c = cookies.SimpleCookie()
+                        rand_token = uuid4()
+                        tokens[str(rand_token)] = form["uname"].value
+                        c['token'] = str(rand_token)
+                        c['token']['expires'] = 3*60*60
+                        t = Timer(3*60*60, delete_token,args = [str(rand_token)])
+                        t.start()
+                        timers[str(rand_token)] = t
+                        self.send_response(200)
+                        self.send_header('Set-Cookie',str(c)[12:])
+                        self.send_header('Content-type',mimetype)
+                        self.end_headers()
+                        self.wfile.write(bytearray(f.read(),"UTF-8"))
                 else:
                     self.send_response(301)
                     self.send_header('Location','/')
@@ -253,5 +245,7 @@ def MakeHandlerClassFromArgv(WIFIAP_handler):
                 else:
                     self.send_response(301)
                     self.send_header('Location','/')
-                    self.end_headers()   
+                    self.end_headers()
+
+
     return WebServer

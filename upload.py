@@ -46,16 +46,16 @@ def initDB():
 
 def send_file(file_name):
     if file_name in uploadedDict:
-        error("File is already uploaded %s" % (file_name))
+        error(f"File is already uploaded {file_name}")
         return
 
-    with open(folder+'/'+file_name, "rb") as fd:
+    with open(f'{folder}/{file_name}', "rb") as fd:
         
         cookies = {'token':API_KEY}
         ret = requests.post(upload_page, files={"filename": fd}, cookies=cookies)
 
-        if int(ret.status_code) != 200:
-            fatal("Error code %s at upload!" % str(ret.status_code))
+        if ret.status_code != 200:
+            fatal(f"Error code {ret.status_code} at upload!")
 
         # Turn returned text into a oneline for easy regex match
         one_line = re.sub(r"[\n\t\r]*", "", ret.text)
@@ -63,17 +63,15 @@ def send_file(file_name):
         match = upload_error_re.search(one_line)
 
         if match is not None:
-            error("Error uploading %s" % (file_name))
+            error(f"Error uploading {file_name}")
             return
 
         match = upload_duplicate_re.search(one_line)
 
         if match is not None:
-            error("File is duplicate %s" % (file_name))
+            error(f"File is duplicate {file_name}")
             uploadedDict[file_name] = 'yes'
-            entry = {}
-            entry['n'] = str(file_name)
-            entry['y'] = str('yes')
+            entry = {'n': str(file_name), 'y': 'yes'}
             db.insert(entry)
             return
 
@@ -83,19 +81,19 @@ def send_file(file_name):
             uploadedDict[file_name] = 'yes'
             entry = {}
             entry['n'] = str(file_name)
-            entry['y'] = str('yes')
+            entry['y'] = 'yes'
             db.insert(entry)
-            success(file_name+" uploaded successfully!")
+            success(f"{file_name} uploaded successfully!")
             # Uncomment if you want to delete file after upload
             # os.remove(folder+'/'+file_name)
             return
 
-        fatal("Unspecified error: %s" % ret.text)
+        fatal(f"Unspecified error: {ret.text}")
 
 
 if folder is None:
     if len(sys.argv) < 2:
-        fatal("Use with %s <capture/capture_folder>" % sys.argv[0])
+        fatal(f"Use with {sys.argv[0]} <capture/capture_folder>")
     folder = sys.argv[1]
 
 if os.path.isdir(folder):
@@ -111,7 +109,7 @@ if os.path.isdir(folder):
 elif os.path.isfile(folder):
     files.append(folder)
 else:
-    fatal("File/folder %s does not exist" % folder)
+    fatal(f"File/folder {folder} does not exist")
 
 initDB()
 # Upload file one by one so we minimize amount of max_size errors
