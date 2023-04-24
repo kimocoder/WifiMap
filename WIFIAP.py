@@ -82,7 +82,7 @@ class WIFIAP:
         BSSID = self.BSSID
         Lat = self.GPSBestLat
         Lon = self.GPSBestLon
-        Link = "https://www.google.com/maps/search/?api=1&query="+str(Lat)+","+str(Lon)
+        Link = f"https://www.google.com/maps/search/?api=1&query={str(Lat)},{str(Lon)}"
         templateLoader = jinja2.FileSystemLoader(searchpath="./templates")
         templateEnv = jinja2.Environment(loader=templateLoader)
         template = templateEnv.get_template('WIFIAP.html')
